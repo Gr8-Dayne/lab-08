@@ -49,28 +49,28 @@ app.get('/location', (req, res) => {
 });
 
 app.get('/weather', (req, res) => {
-  
+
   superagent.get(`https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`).then(response => {
-    
+
     let dailyData = response.body.daily.data;
-    
-    let nextForecast = dailyData.map( (val, index, array) => {
+
+    let nextForecast = dailyData.map((val) => {
       let nextForeCastObj = new Forcast(val.summary, val.time);
       return nextForeCastObj;
     });
-    
+
     res.send(nextForecast);
   });
 });
 
 app.get('/events', (req, res) => {
-  
+
   superagent.get(`http://api.eventful.com/json/events/search?location=${req.query.data.formatted_query}&app_key=${process.env.EVENTFUL_API_KEY}`).then(response => {
     const eventfulJSON = JSON.parse(response.text);
 
     const eventsArray = eventfulJSON.events.event;
 
-    const nextEvents = eventsArray.map( (val, index, array) => {
+    const nextEvents = eventsArray.map((val) => {
       let nextEventObj = new Event(val.url, val.venue_name, val.start_time, val.title);
       return nextEventObj;
     });
