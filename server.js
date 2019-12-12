@@ -4,8 +4,13 @@ const PORT = process.env.PORT || 3077;
 const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
-
+const pg = require('pg');
 const app = express();
+
+const client = new pg.Client(process.env.DATABASE_URL);
+client.on('err', err => { throw err; });
+
+
 require('dotenv').config();
 app.use(cors());
 
@@ -31,8 +36,14 @@ function Event(link, name, date, summary) {
 
 app.get('/location', (req, res) => {
 
-  superagent.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`).then(response => {
 
+  let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`;
+
+  console.log('YOOOOOO');
+  superagent.get(url).then(response => {
+    
+    console.log('API RESPONSE: ', url)
+    
     const geoDataArray = response.body.results;
     const search_query = geoDataArray[0].address_components[0].short_name;
     const formatted_query = geoDataArray[0].formatted_address;
@@ -45,7 +56,27 @@ app.get('/location', (req, res) => {
 
   });
 
+});
 
+app.get('/add', (req, res) => {
+
+  superagent.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`).then(response => {
+
+    let geoDataArray = response.body.results;
+    let searchquery = geoDataArray[0].address_components[0].short_name;
+    let formattedquery = geoDataArray[0].formatted_address;
+    let lat = geoDataArray[0].geometry.location.lat;
+    let lng = geoDataArray[0].geometry.location.lng;
+
+    let SQL = 'INSERT INTO city_explorer (searchquery, formattedquery, lat, lng) RETURNING *';
+    let saveValues = [searchquery, formattedquery, lat, lng];
+
+    client.query(SQL, saveValues)
+      .then(results => {
+        res.status(200).json(results);
+      })
+      .catch(err => console.error(err));
+  })
 });
 
 app.get('/weather', (req, res) => {
@@ -81,6 +112,8 @@ app.get('/events', (req, res) => {
 });
 
 
+
 app.listen(PORT, () => {
   console.log(`App is on PORT: ${PORT}`);
 })
+
