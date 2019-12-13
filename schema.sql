@@ -1,9 +1,10 @@
-DROP TABLE city_explorer;
+DROP TABLE location;
+
 CREATE TABLE IF NOT EXISTS
-city_explorer(
-  id SERIAL PRIMARY KEY NOT NULL,
-  searchquery VARCHAR(255) NOT NULL,
-  formattedquery VARCHAR(255) NOT NULL,
-  lat FLOAT NOT NULL,
-  lng FLOAT NOT NULL
-  );
+location(
+  id SERIAL PRIMARY KEY,
+  search_query VARCHAR(255) NOT NULL,
+  formatted_query VARCHAR(255) NOT NULL,
+  lat NUMERIC (18,6),
+  lng NUMERIC (18,6)
+);
