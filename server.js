@@ -1,18 +1,24 @@
 'use strict';
 
-const PORT = process.env.PORT || 3077;
 const express = require('express');
 const cors = require('cors');
-const superagent = require('superagent');
 const pg = require('pg');
+const superagent = require('superagent');
+require('dotenv').config();
+
+// require('dotenv').config();
+
+const PORT = process.env.PORT || 3077;
 const app = express();
+app.use(cors());
+
 
 const client = new pg.Client(process.env.DATABASE_URL);
 client.on('err', err => { throw err; });
+client.connect();
 
 
 require('dotenv').config();
-const pg = require('pg');
 app.use(cors());
 
 
@@ -95,6 +101,7 @@ app.get('/weather', (req, res) => {
   });
 });
 
+
 app.get('/events', (req, res) => {
 
   superagent.get(`http://api.eventful.com/json/events/search?location=${req.query.data.formatted_query}&app_key=${process.env.EVENTFUL_API_KEY}`).then(response => {
@@ -112,7 +119,7 @@ app.get('/events', (req, res) => {
   });
 });
 
-
+//error handler
 
 app.listen(PORT, () => {
   console.log(`App is on PORT: ${PORT}`);
