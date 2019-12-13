@@ -7,12 +7,13 @@ const superagent = require('superagent');
 const pg = require('pg');
 const app = express();
 
-const client = new pg.Client(process.env.DATABASE_URL);
-client.on('err', err => { throw err; });
-
-
 require('dotenv').config();
 app.use(cors());
+
+const client = new pg.Client(process.env.DATABASE_URL);
+client.on('err', err => { throw err; });
+client.connect();
+
 
 
 function Geolocation(latitude, longitude, formatted_address, search_query) {
@@ -39,11 +40,7 @@ app.get('/location', (req, res) => {
 
   let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`;
 
-  console.log('YOOOOOO');
   superagent.get(url).then(response => {
-    
-    console.log('API RESPONSE: ', url)
-    
     const geoDataArray = response.body.results;
     const search_query = geoDataArray[0].address_components[0].short_name;
     const formatted_query = geoDataArray[0].formatted_address;
@@ -52,32 +49,25 @@ app.get('/location', (req, res) => {
 
     const nextLocation = new Geolocation(lat, lng, formatted_query, search_query);
 
+    const SQL = `
+      INSERT INTO location
+        (search_query, formatted_query, lat, lng)
+        VALUES($1, $2, $3, $4)
+        RETURNING id
+      `;
+
+    console.log(SQL);
+
+    client.query(SQL, [search_query, formatted_query, lat, lng]);
+
+    console.log(client.query(SQL, [search_query, formatted_query, lat, lng]));
+
     res.send(nextLocation);
 
   });
 
 });
 
-app.get('/add', (req, res) => {
-
-  superagent.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`).then(response => {
-
-    let geoDataArray = response.body.results;
-    let searchquery = geoDataArray[0].address_components[0].short_name;
-    let formattedquery = geoDataArray[0].formatted_address;
-    let lat = geoDataArray[0].geometry.location.lat;
-    let lng = geoDataArray[0].geometry.location.lng;
-
-    let SQL = 'INSERT INTO city_explorer (searchquery, formattedquery, lat, lng) RETURNING *';
-    let saveValues = [searchquery, formattedquery, lat, lng];
-
-    client.query(SQL, saveValues)
-      .then(results => {
-        res.status(200).json(results);
-      })
-      .catch(err => console.error(err));
-  })
-});
 
 app.get('/weather', (req, res) => {
 
