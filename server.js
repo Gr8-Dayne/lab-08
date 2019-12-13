@@ -56,11 +56,7 @@ app.get('/location', (req, res) => {
         RETURNING id
       `;
 
-    console.log(SQL);
-
     client.query(SQL, [search_query, formatted_query, lat, lng]);
-
-    console.log(client.query(SQL, [search_query, formatted_query, lat, lng]));
 
     res.send(nextLocation);
 
