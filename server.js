@@ -1,27 +1,22 @@
 'use strict';
 
+//Global Variables
+const PORT = process.env.PORT || 3077;
 const express = require('express');
 const cors = require('cors');
-const pg = require('pg');
 const superagent = require('superagent');
-require('dotenv').config();
-
-// require('dotenv').config();
-
-const PORT = process.env.PORT || 3077;
+const pg = require('pg');
 const app = express();
-app.use(cors());
 
+require('dotenv').config();
+app.use(cors());
 
 const client = new pg.Client(process.env.DATABASE_URL);
 client.on('err', err => { throw err; });
 client.connect();
 
 
-require('dotenv').config();
-app.use(cors());
-
-
+//Constructors
 function Geolocation(latitude, longitude, formatted_address, search_query) {
   this.latitude = latitude,
   this.longitude = longitude,
@@ -41,16 +36,42 @@ function Event(link, name, date, summary) {
   this.summary = summary
 }
 
-app.get('/location', (req, res) => {
+//Event Handler
+function queryLocation(req, res) {
+  let searchHandler = {
+    caheHit: (data) => {
+      response.status(200).send(data);
+    },
+    cacheMiss: (query) => {
+    return searchLaToLng (query)
+      .then(result => {
+        response.send(result);
+      }).catch
+  }
+}
+queryLocation(req.query.data, searchHandler); 
 
+////serch SQL first////
+
+function queryLocation(query, handler) {
+  const SQL = 'SELECT * FROM location where search_query = $1';
+  const values = [query];
+  return client.query(SQL, values).then(data => {
+    if (data.rowCount) {
+      handler.caheHit(data.row[0])
+    } else {
+      handler.cacheMiss(query);
+    }
+  }).chatch(err => console.error(err));
+}
+
+///////////end SQL search///////
+
+app.get('/location', (req, res) => {
 
   let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`;
 
-  console.log('YOOOOOO');
   superagent.get(url).then(response => {
-    
-    console.log('API RESPONSE: ', url)
-    
     const geoDataArray = response.body.results;
     const search_query = geoDataArray[0].address_components[0].short_name;
     const formatted_query = geoDataArray[0].formatted_address;
@@ -59,32 +80,21 @@ app.get('/location', (req, res) => {
 
     const nextLocation = new Geolocation(lat, lng, formatted_query, search_query);
 
+    const SQL = `
+      INSERT INTO location
+        (search_query, formatted_query, lat, lng)
+        VALUES($1, $2, $3, $4)
+        RETURNING id
+      `;
+
+    client.query(SQL, [search_query, formatted_query, lat, lng]);
+
     res.send(nextLocation);
 
   });
 
 });
 
-app.get('/add', (req, res) => {
-
-  superagent.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`).then(response => {
-
-    let geoDataArray = response.body.results;
-    let searchquery = geoDataArray[0].address_components[0].short_name;
-    let formattedquery = geoDataArray[0].formatted_address;
-    let lat = geoDataArray[0].geometry.location.lat;
-    let lng = geoDataArray[0].geometry.location.lng;
-
-    let SQL = 'INSERT INTO city_explorer (searchquery, formattedquery, lat, lng) RETURNING *';
-    let saveValues = [searchquery, formattedquery, lat, lng];
-
-    client.query(SQL, saveValues)
-      .then(results => {
-        res.status(200).json(results);
-      })
-      .catch(err => console.error(err));
-  })
-});
 
 app.get('/weather', (req, res) => {
 
@@ -100,7 +110,6 @@ app.get('/weather', (req, res) => {
     res.send(nextForecast);
   });
 });
-
 
 app.get('/events', (req, res) => {
 
@@ -119,9 +128,8 @@ app.get('/events', (req, res) => {
   });
 });
 
-//error handler
+
 
 app.listen(PORT, () => {
   console.log(`App is on PORT: ${PORT}`);
 })
-
