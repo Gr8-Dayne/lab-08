@@ -15,7 +15,6 @@ const client = new pg.Client(process.env.DATABASE_URL);
 client.on('err', err => { throw err; });
 client.connect();
 
-
 //Constructors
 function Geolocation(latitude, longitude, formatted_address, search_query) {
   this.latitude = latitude,
