@@ -88,6 +88,8 @@ app.get('/location', (req, res) => {
 
     client.query(SQL, [search_query, formatted_query, lat, lng]);
 
+    // if (formatted_query === )
+
     res.send(nextLocation);
 
   });
