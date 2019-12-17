@@ -15,7 +15,6 @@ client.on('err', err => { throw err; });
 client.connect();
 
 
-
 function Geolocation(latitude, longitude, formatted_address, search_query) {
   this.latitude = latitude,
   this.longitude = longitude,
