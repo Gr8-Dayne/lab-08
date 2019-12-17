@@ -35,34 +35,35 @@ function Event(link, name, date, summary) {
   this.summary = summary
 }
 
-//Event Handler
-function queryLocation(req, res) {
-  let searchHandler = {
-    caheHit: (data) => {
-      response.status(200).send(data);
-    },
-    cacheMiss: (query) => {
-    return searchLaToLng (query)
-      .then(result => {
-        response.send(result);
-      }).catch
-  }
-}
-queryLocation(req.query.data, searchHandler); 
+//event Handler
+// function queryLocation(req, res) {
+//   let searchHandler = {
+//     caheHit: (data) => {
+//       res.status(200).send(data);
+//     },
+//     cacheMiss: (query) => {
+//       return searchLaToLng(query)
+//         .then(result => {
+//           res.send(result);
+//         }).catch
+//     }
+//   }
+//   queryLocation(req.query.data, searchHandler);
+// }
 
-////serch SQL first////
+////search SQL first////
 
-function queryLocation(query, handler) {
-  const SQL = 'SELECT * FROM location where search_query = $1';
-  const values = [query];
-  return client.query(SQL, values).then(data => {
-    if (data.rowCount) {
-      handler.caheHit(data.row[0])
-    } else {
-      handler.cacheMiss(query);
-    }
-  }).chatch(err => console.error(err));
-}
+// function queryLocation(query, handler) {
+//   const SQL = 'SELECT * FROM location where search_query = $1';
+//   const values = [query];
+//   return client.query(SQL, values).then(data => {
+//     if (data.rowCount) {
+//       handler.caheHit(data.row[0])
+//     } else {
+//       handler.cacheMiss(query);
+//     }
+//   }).chatch(err => console.error(err));
+// }
 
 ///////////end SQL search///////
 
@@ -131,4 +132,6 @@ app.get('/events', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`App is on PORT: ${PORT}`);
-})
+});
+
+
