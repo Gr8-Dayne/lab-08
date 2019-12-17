@@ -35,71 +35,63 @@ function Event(link, name, date, summary) {
   this.summary = summary
 }
 
-//Event Handler
-function queryLocation(req, res) {
-  let searchHandler = {
-    caheHit: (data) => {
-      response.status(200).send(data);
-    },
-    cacheMiss: (query) => {
-    return searchLaToLng (query)
-      .then(result => {
-        response.send(result);
-      }).catch
-  }
-}
-queryLocation(req.query.data, searchHandler); 
-
-////serch SQL first////
-
-function queryLocation(query, handler) {
-  const SQL = 'SELECT * FROM location where search_query = $1';
-  const values = [query];
-  return client.query(SQL, values).then(data => {
-    if (data.rowCount) {
-      handler.caheHit(data.row[0])
-    } else {
-      handler.cacheMiss(query);
-    }
-  }).chatch(err => console.error(err));
-}
-
 ///////////end SQL search///////
 
 app.get('/location', (req, res) => {
 
-  let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`;
+  //Check if info is data and send if it's there
 
-  superagent.get(url).then(response => {
-    const geoDataArray = response.body.results;
-    const search_query = geoDataArray[0].address_components[0].short_name;
-    const formatted_query = geoDataArray[0].formatted_address;
-    const lat = geoDataArray[0].geometry.location.lat;
-    const lng = geoDataArray[0].geometry.location.lng;
+  const SQL = `SELECT * FROM location where search_query = '${req.query.city}';`;
+  // const values = [city];
+  client.query(SQL).then(data => {
 
-    const nextLocation = new Geolocation(lat, lng, formatted_query, search_query);
+    if (data.rowCount === 0){
 
-    const SQL = `
-      INSERT INTO location
-        (search_query, formatted_query, lat, lng)
-        VALUES($1, $2, $3, $4)
-        RETURNING id
-      `;
+      console.log('GETTING NEW DATA');
 
-    client.query(SQL, [search_query, formatted_query, lat, lng]);
+      let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.city}&key=${process.env.GEOCODE_API_KEY}`;
 
-    // if (formatted_query === )
+      superagent.get(url).then(response => {
+        const geoDataArray = response.body.results;
+        const search_query = req.query.city;
+        const formatted_query = geoDataArray[0].formatted_address;
+        const latitude = geoDataArray[0].geometry.location.lat;
+        const longitude = geoDataArray[0].geometry.location.lng;
 
-    res.send(nextLocation);
+        const nextLocation = new Geolocation(latitude, longitude, formatted_query, search_query);
 
-  });
+        const SQL = `
+          INSERT INTO location
+            (search_query, formatted_query, latitude, longitude)
+            VALUES($1, $2, $3, $4)
+            RETURNING id
+          `;
+
+        client.query(SQL, [search_query, formatted_query, latitude, longitude]);
+
+        res.send(nextLocation);
+
+      }).catch( err => {
+        console.error(err)
+      });
+
+    } else {
+      console.log('FOUND DATA IN DATABASE', data.rows);
+      res.send(data.rows[0]);
+    }
+
+
+  }).catch(err => console.error(err));
+
 
 });
 
 
 app.get('/weather', (req, res) => {
+  // console.log(req.query.latitude)
+  let url = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${req.query.latitude},${req.query.longitude}`;
 
-  superagent.get(`https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`).then(response => {
+  superagent.get(url).then(response => {
 
     let dailyData = response.body.daily.data;
 
@@ -109,12 +101,13 @@ app.get('/weather', (req, res) => {
     });
 
     res.send(nextForecast);
-  });
+  })
+  // .catch
 });
 
 app.get('/events', (req, res) => {
 
-  superagent.get(`http://api.eventful.com/json/events/search?location=${req.query.data.formatted_query}&app_key=${process.env.EVENTFUL_API_KEY}`).then(response => {
+  superagent.get(`http://api.eventful.com/json/events/search?location=${req.query.formatted_query}&app_key=${process.env.EVENTFUL_API_KEY}`).then(response => {
     const eventfulJSON = JSON.parse(response.text);
 
     const eventsArray = eventfulJSON.events.event;
@@ -133,4 +126,6 @@ app.get('/events', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`App is on PORT: ${PORT}`);
-})
+});
+
+
