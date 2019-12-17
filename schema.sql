@@ -1,3 +1,4 @@
+
 DROP TABLE location;
 
 CREATE TABLE IF NOT EXISTS
@@ -8,3 +9,4 @@ location(
   lat NUMERIC (18,6),
   lng NUMERIC (18,6)
 );
+
