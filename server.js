@@ -82,7 +82,6 @@ app.get('/location', (req, res) => {
     //Run this code
     if (dbResponse) {
       res.send(dbResponse);
-
     } else {
 
       let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${req.query.data}&key=${process.env.GEOCODE_API_KEY}`;
